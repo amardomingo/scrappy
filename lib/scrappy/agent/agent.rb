@@ -2,10 +2,13 @@ module Scrappy
   class Agent
     include MonitorMixin
     include Extractor
+    include Trainer
+    include Optimizer
     include MapReduce
     include Cached
+    include BlindAgent
 
-    Options = OpenStruct.new :format=>:yarf, :format_header=>true, :depth=>0, :agent=>:blind, :delay=>0, :workers=>10
+    Options = OpenStruct.new :format=>:yarf, :format_header=>true, :depth=>0, :delay=>0, :workers=>10
     ContentTypes = { :png => 'image/png', :rdfxml => 'application/rdf+xml',
                      :rdf => 'application/rdf+xml' }
 
@@ -13,17 +16,7 @@ module Scrappy
       @pool ||= {}
     end
     def self.[] id
-      pool[id] || Agent.create(:id=>id)
-    end
-
-    def self.create args={}
-      if (args[:agent] || Options.agent) == :visual
-        require 'scrappy/agent/visual_agent'
-        VisualAgent.new args
-      else
-        require 'scrappy/agent/blind_agent'
-        BlindAgent.new args
-      end
+      pool[id] || Agent.new(:id=>id)
     end
 
     attr_accessor :id, :options, :kb
@@ -78,17 +71,22 @@ module Scrappy
       else
         []
       end
+
+      # Recently created URIs are not followed
+      nofollow = triples.select { |s,p,o| p==ID("rdf:type") and o==ID("sc:NewUri") }.map{|s,p,o| s}.select{|n| n.is_a?(Symbol)}
+      pages -= nofollow
+      uris  -= nofollow
       
       items = ( pages.map { |uri| {:uri=>uri.to_s, :depth=>[-1, depth].max} } +
                 uris.map  { |uri| {:uri=>uri.to_s, :depth=>[-1, depth-1].max} } ).
-                uniq.select{ |item| !RDF::ID.bnode?(item[:uri]) }
+                uniq.select { |item| !RDF::ID.bnode?(item[:uri]) }
       
-      items.each { |item| puts "Enqueuing (depth = #{item[:depth]}): #{item[:uri]}" } if options.debug
+      items.each { |item| puts "Enqueuing (depth = #{item[:depth]}): #{item[:uri]}" if !queue or !(queue.history + queue.items).include?(item) } if options.debug
       
-      if queue.nil?
-        triples += process items
-      else
+      if queue
         items.each { |item| queue.push_unless_done item }
+      else
+        triples += process items
       end
 
       triples unless options.dump
@@ -102,10 +100,11 @@ module Scrappy
       end
       
       triples = []; results.each { |result| triples += result }
+      triples.uniq!
       
       puts 'done!'if options.debug
       
-      triples.uniq
+      triples
     end
 
     def request args={}
@@ -159,7 +158,7 @@ module Scrappy
     end
 
     def clean triples
-      triples.uniq.select { |s,p,o| p!=Node('rdf:type') or ![Node('sc:Index'), Node('sc:Page')].include?(o) } 
+      triples.uniq.select { |s,p,o| p!=ID('rdf:type') or ![ID('sc:Index'), ID('sc:Page'), ID('sc:NewUri')].include?(o) }
     end
     
     # Do the extraction using RDF repository
@@ -230,8 +229,7 @@ module Scrappy
       puts 'done!' if options.debug
       
       if self.html_data?
-        add_visual_data! if options.referenceable               # Adds tags including visual information
-        triples = extract(self.uri, html, options.referenceable) # Extract data
+        triples = extract(self.uri, html, self.kb, options.referenceable) # Extract data
         Dumper.dump self.uri, clean(triples), options.format if options.dump # Dump results to disk
         triples
       else

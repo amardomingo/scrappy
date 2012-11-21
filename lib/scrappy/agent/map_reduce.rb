@@ -6,6 +6,8 @@ module MapReduce
   class Queue
     include MonitorMixin
     
+    attr_reader :history, :items
+    
     def initialize
       super
       @items   = []
@@ -17,7 +19,7 @@ module MapReduce
       item = nil
       synchronize do
         item = @items.shift
-        @history << item
+        @history << item if item
         if @items.empty?
           yield item if (block_given? and item)
           yielded = true
@@ -36,7 +38,7 @@ module MapReduce
     end
 
     def push_unless_done value
-      synchronize { @items << value unless @history.include?(value) }
+      synchronize { @items << value if !@history.include?(value) and !@items.include?(value) }
     end
     
     def empty?

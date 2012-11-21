@@ -19,6 +19,11 @@ sc:Page:
   rdfs:label: "Page"
   rdfs:comment: "A web resource that extends the data existing in another web resource, usually employing the user-interface pattern of pagination. When scraping a web resource, all sc:Pages should be scraped as well in order to retrieve all the data present in that web resource"
 
+sc:NewUri:
+  rdf:type: rdf:Class
+  rdfs:label: "New URI"
+  rdfs:comment: "An empty web resource whose URI is the result of a scraping process and therefore should not be followed by a crawler"
+
 sc:selector:
   rdf:type: rdf:Property
   rdfs:label: "selector"
@@ -99,6 +104,20 @@ sc:downcase:
   rdfs:domain: sc:NewUriSelector
   rdfs:range: rdf:Literal
 
+sc:nonempty:
+  rdf:type: rdf:Property
+  rdfs:label: "non-empty"
+  rdfs:comment: "Indicates whether or not to allow empty literal as selector's output"
+  rdfs:domain: sc:Selector
+  rdfs:range: rdf:Literal
+
+sc:boolean:
+  rdf:type: rdf:Property
+  rdfs:label: "boolean"
+  rdfs:comment: "Indicates whether or not the selector's output is boolean"
+  rdfs:domain: sc:Selector
+  rdfs:range: rdf:Literal
+
 sc:debug:
   rdf:type: rdf:Property
   rdfs:label: "debug"
@@ -109,8 +128,8 @@ sc:debug:
 sc:path:
   rdf:type: rdf:Property
   rdfs:label: "path"
-  rdfs:comment: "XPath to the fragment subject inside its web page"
-  rdfs:domain: sc:Fragment
+  rdfs:comment: "XPath to the element selected by the subject"
+  rdfs:domain: sc:UnivocalSelector
   rdfs:range: rdf:Literal
 
 sc:uri:
@@ -118,14 +137,14 @@ sc:uri:
   rdfs:label: "URI"
   rdfs:comment: "URI of an RDF resource"
   rdfs:domain: rdf:Resource
-  rdfs:range: rdf:Resource
+  rdfs:range: rdf:Literal
 
 sc:document:
   rdf:type: rdf:Property
   rdfs:label: "document"
-  rdfs:comment: "Document of the fragment subject"
-  rdfs:domain: sc:Fragment
-  rdfs:range: rdf:Resource
+  rdfs:comment: "Web document that sets the context of the subject selector, given by its URI"
+  rdfs:domain: sc:UnivocalSelector
+  rdfs:range: rdf:Literal
 
 sc:tag:
   rdf:type: rdf:Property
@@ -174,6 +193,13 @@ sc:height:
   rdfs:domain: sc:Presentation
   rdfs:range: rdf:Literal
 
+sc:font_family:
+  rdf:type: rdf:Property
+  rdfs:label: "font family"
+  rdfs:comment: "Font family of the text in a fragment when viewed on a browser. It can be serif or sans-serif"
+  rdfs:domain: sc:Presentation
+  rdfs:range: rdf:Literal
+
 sc:font_size:
   rdf:type: rdf:Property
   rdfs:label: "font size"
@@ -188,20 +214,6 @@ sc:font_weight:
   rdfs:domain: sc:Presentation
   rdfs:range: rdf:Literal
 
-sc:color:
-  rdf:type: rdf:Property
-  rdfs:label: "color"
-  rdfs:comment: "Text color of a fragment when viewed on a browser"
-  rdfs:domain: sc:Presentation
-  rdfs:range: rdf:Literal
-
-sc:background_color:
-  rdf:type: rdf:Property
-  rdfs:label: "background color"
-  rdfs:comment: "Background color of a fragment when viewed on a browser"
-  rdfs:domain: sc:Presentation
-  rdfs:range: rdf:Literal
-
 sc:text:
   rdf:type: rdf:Property
   rdfs:label: "font weight"
@@ -209,18 +221,16 @@ sc:text:
   rdfs:domain: sc:Presentation
   rdfs:range: rdf:Literal
 
-sc:children_count:
-  rdf:type: rdf:Property
-  rdfs:label: "children count"
-  rdfs:comment: "Number of children that the fragment subject has"
-  rdfs:domain: sc:Presentation
-  rdfs:range: rdf:Literal
-
-
 sc:attribute:
   rdfs:label: "attribute"
   rdfs:comment: "An HTML attribute whose content is the output of a tag selector"
   rdfs:domain: sc:TagSelector
+  rdfs:range: rdf:Literal
+
+sc:follow:
+  rdfs:label: "follow"
+  rdfs:comment: "Boolean indicating whether the resulting URI of a NewUriSelector must be followed or not"
+  rdfs:domain: sc:NewUriSelector
   rdfs:range: rdf:Literal
 
 sc:format:

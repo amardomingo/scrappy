@@ -1,26 +1,21 @@
 require 'sinatra'
 require 'thin'
 require 'haml'
+require 'scrappy/server/helpers'
+require 'scrappy/server/admin'
+require 'scrappy/server/errors'
 
 module Scrappy
   class Server < Sinatra::Base
+    helpers JavaScriptHelpers
+    register Errors
+    register Admin if Scrappy::Options.admin
+    
     enable :sessions
-    set    :root,   File.dirname(__FILE__)
-    set    :views,  Proc.new { File.join(root, "views") }
-    set    :public, Proc.new { File.join(root, "public") }
+    set    :root,          File.join(File.dirname(__FILE__), '..', '..', '..')
+    set    :views,         Proc.new { File.join(root, "views") }
+    set    :public_folder, Proc.new { File.join(root, "public") }
 
-    get '/' do
-      if params[:format] and params[:uri]
-        redirect "#{settings.base_uri}/#{params[:format]}/#{simplify_uri(params[:uri])}"
-      else
-        haml :home
-      end
-    end
-    
-    get '/help' do
-      haml :help
-    end
-    
     get '/:format/*' do |format, url|
       process_request :get, format, url, params[:callback]
     end
@@ -31,6 +26,7 @@ module Scrappy
 
     protected
     def process_request method, format, url, callback
+      url = url.gsub("http:/","http://").gsub("https:/","https://") if url.index(/http:\/\w/) or url.index(/https:\/\w/)
       response = agent.proxy :method=>method, :uri=>url, :inputs=>inputs, :format=>format.to_sym
       case response.status
       when :redirect
@@ -48,7 +44,7 @@ module Scrappy
       return @agent if @agent
       if session[:agent].nil? || session[:token] != SESSION_TOKEN
         session[:token] = SESSION_TOKEN
-        session[:agent] = Scrappy::Agent.create.id
+        session[:agent] = Scrappy::Agent.new.id
       end
       @agent = Scrappy::Agent[session[:agent]]
     end

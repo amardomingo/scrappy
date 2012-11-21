@@ -1,0 +1,10 @@
+#!/usr/bin/ruby
+
+while true
+  begin 
+    system "bin/scrappy -g http://www.programmableweb.com/"
+  rescue
+  end
+    
+  sleep 900
+end
